@@ -1,0 +1,24 @@
+version: "3"
+services:
+  site:
+    build:
+      context: ./build
+    environment:
+     - VIRTUAL_HOST=wiki.crunchweb.eu
+     - LETSENCRYPT_HOST=wiki.crunchweb.eu
+    volumes:
+     - ./data:/var/www/data
+     - ./conf:/var/www/conf
+     - ./tpl:/var/www/lib/tpl
+     - ./plugins:/var/www/lib/plugins
+
+volumes:
+  data:
+  conf:
+  tpl:
+  plugins:
+
+networks:
+  default:
+    external:
+      name: webproxy

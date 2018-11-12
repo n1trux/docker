@@ -1,0 +1,10 @@
+version: '3'
+services:
+  syncthing:
+    build: .
+    image: syncthing
+    volumes:
+      - ./config:/var/syncthing/config:z
+      - /mnt/data/syncthing:/var/syncthing:z
+    network_mode: host
+    container_name: syncthing

@@ -1,0 +1,89 @@
+version: '3'
+services:
+  db:
+    image: postgres:alpine
+    restart: unless-stopped
+    volumes:
+      - db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=temporaryfix
+    env_file:
+      - ./config/db.env
+    networks:
+      - db
+
+  app:
+    image: nextcloud:fpm-alpine
+    restart: unless-stopped
+    volumes:
+      - nextcloud:/var/www/html
+      - ./config/nextcloud:/var/www/html/config
+      - ./apps:/var/www/html/apps
+      - data:/var/www/html/data:rw
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=nextcloud
+    env_file:
+      - ./config/db.env
+    depends_on:
+      - db
+    networks:
+      - db
+      - app
+
+  web:
+    build: ./web
+    restart: unless-stopped
+    expose:
+      - "80"
+    volumes:
+      - nextcloud:/var/www/html:ro
+    depends_on:
+      - app
+    labels:
+      - "traefik.docker.network=web"
+      - "traefik.frontend.rule=Host:${NEXTHING_HOST}"
+      - "traefik.enable=true"
+      - "traefik.port=80"
+    networks:
+      - app
+      - web
+
+  sync:
+    build: ./sync
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      # use UID 82 (default UID for www-data in alpine)
+      - "PGID=82"
+      - "PUID=82"
+    labels:
+      - "traefik.docker.network=web"
+      - "traefik.frontend.rule=Host:sync.${NEXTHING_HOST}"
+      - "traefik.enable=true"
+      - "traefik.port=8384"
+    volumes:
+      - ./config/sync:/config
+      - data:/data:rw
+    expose:
+      - "8384"
+      - "22000"
+      - "21027"
+    networks:
+      - web
+
+volumes:
+  db:
+  nextcloud:
+  data:
+    driver_opts:
+      type: none
+      o: bind
+      device: "${PWD}/data"
+
+networks:
+  web:
+    external: true
+  app:
+  db:
